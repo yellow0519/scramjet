@@ -152,14 +152,17 @@ impl<E: UrlRewriter> Rewriter<E> {
 			flags,
 		};
 		visitor.visit_program(&parsed.program);
-		if let Some(error) = visitor.error {
-			return Err(RewriterError::Url(error));
-		}
 		let mut jschanges = visitor.jschanges;
 
-		let changed = jschanges.perform(js, &self.cfg, &visitor.flags)?;
+		let result = if let Some(error) = visitor.error {
+			Err(RewriterError::Url(error))
+		} else {
+			jschanges.perform(js, &self.cfg, &visitor.flags)
+		};
 
 		self.put_changes(jschanges)?;
+		let changed = result?;
+		let flags = visitor.flags;
 
 		let js: Vec<'alloc, u8> = changed.source;
 		let sourcemap: Vec<'alloc, u8> = changed.map;
@@ -168,7 +171,7 @@ impl<E: UrlRewriter> Rewriter<E> {
 			js,
 			sourcemap,
 			errors: parsed.errors,
-			flags: visitor.flags,
+			flags,
 		})
 	}
 }
