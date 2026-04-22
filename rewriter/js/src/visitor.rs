@@ -69,6 +69,23 @@ where
 		}
 	}
 
+	fn walk_member_expression(&mut self, it: &Expression<'data>) -> bool {
+		if match it {
+			Expression::Identifier(s) => {
+				self.rewrite_ident(&s.name, s.span);
+				true
+			}
+			Expression::StaticMemberExpression(s) => self.walk_member_expression(&s.object),
+			Expression::ComputedMemberExpression(s) => self.walk_member_expression(&s.object),
+			_ => false,
+		} {
+			return true;
+		}
+
+		walk::walk_expression(self, it);
+		false
+	}
+
 	fn handle_computed_member_expression(&mut self, it: &ComputedMemberExpression<'data>) {
 		match &it.expression {
 			Expression::NullLiteral(_)
@@ -453,8 +470,7 @@ where
 	}
 
 	fn visit_new_expression(&mut self, it: &NewExpression<'data>) {
-		// ??
-		// self.walk_member_expression(&it.callee);
+		self.walk_member_expression(&it.callee);
 		walk::walk_arguments(self, &it.arguments);
 	}
 
