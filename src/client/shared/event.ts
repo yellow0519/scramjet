@@ -87,7 +87,20 @@ export default function (client: ScramjetClient, self: Self) {
 									return handler[prop].call(target);
 								}
 
-								if (typeof value === "function") {
+								let safeFunction = false;
+								if (typeof prop === "string" && typeof value === "function") {
+									let proto = Reflect.getPrototypeOf(target);
+									while (proto && proto !== Object.prototype) {
+										if (Object.prototype.hasOwnProperty.call(proto, prop)) {
+											safeFunction = true;
+											break;
+										}
+
+										proto = Reflect.getPrototypeOf(proto);
+									}
+								}
+
+								if (safeFunction) {
 									return new Proxy(value, {
 										apply(target, that, args) {
 											if (that === reciever) {
