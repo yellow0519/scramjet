@@ -886,20 +886,20 @@ where
 			}
 			AssignmentTarget::ArrayAssignmentTarget(a) => {
 				if !self.flags.destructure_rewrites {
-					return;
-				}
-
-				let mut restids: Vec<Atom<'data>> = Vec::new();
-				let mut location_assigned: bool = false;
-				self.recurse_array_assignment_target(a, &mut restids, &mut location_assigned);
-				if restids.len() > 0 || location_assigned {
-					self.jschanges.add(rewrite!(
-						it.span,
-						WrapObjectAssignment {
-							restids,
-							location_assigned
-						}
-					));
+					walk::walk_assignment_target(self, &it.left);
+				} else {
+					let mut restids: Vec<Atom<'data>> = Vec::new();
+					let mut location_assigned: bool = false;
+					self.recurse_array_assignment_target(a, &mut restids, &mut location_assigned);
+					if restids.len() > 0 || location_assigned {
+						self.jschanges.add(rewrite!(
+							it.span,
+							WrapObjectAssignment {
+								restids,
+								location_assigned
+							}
+						));
+					}
 				}
 			}
 			_ => {}

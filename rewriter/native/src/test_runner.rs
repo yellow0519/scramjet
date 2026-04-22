@@ -151,4 +151,39 @@ function check(val) {
 			rewriter.reset();
 		}
 	}
+
+	#[test]
+	fn array_assignment_rhs_is_rewritten_when_destructure_rewrites_disabled() {
+		let opts = RewriterOptions {
+			prefix: String::from("/scrammedjet/"),
+			wrapfn: String::from("$wrap"),
+			wrappropertybase: String::from("$sj_"),
+			wrappropertyfn: String::from("$prop"),
+			cleanrestfn: String::from("$clean"),
+			importfn: String::from("$import"),
+			rewritefn: String::from("$rewrite"),
+			metafn: String::from("$meta"),
+			setrealmfn: String::from("$setrealm"),
+			pushsourcemapfn: String::from("$pushsourcemap"),
+			trysetfn: String::from("$tryset"),
+			templocid: String::from("$temploc"),
+			tempunusedid: String::from("$tempunused"),
+			base: String::from("https://google.com/glorngle/si.js"),
+			sourcetag: String::from("glongle1"),
+			is_module: false,
+			capture_errors: false,
+			do_sourcemaps: false,
+			scramitize: false,
+			strict_rewrites: true,
+			destructure_rewrites: false,
+		};
+
+		let mut rewriter = NativeRewriter::new(&opts);
+		let rewritten = rewriter
+			.rewrite("let w; ([w] = [top]); check(w);", &opts)
+			.unwrap();
+
+		let mut ctx = create_context();
+		ctx.eval(Source::from_bytes(rewritten.js.as_slice())).unwrap();
+	}
 }
