@@ -22,9 +22,6 @@ const bare = createBareServer("/bare/", {
 	blockLocal: false,
 });
 
-wisp.options.allow_loopback_ips = true;
-wisp.options.allow_private_ips = true;
-
 const fastify = Fastify({
 	serverFactory: (handler) => {
 		return createServer()
