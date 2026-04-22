@@ -95,7 +95,6 @@ export default function (client: ScramjetClient, _self: Self) {
 				{
 					scramjet$type: "registerServiceWorker",
 					port: handle,
-					origin: client.url.origin,
 				} as MessageC2W,
 				[handle]
 			);
