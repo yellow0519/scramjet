@@ -231,7 +231,7 @@ function traverseParsedHtml(
 			node.attribs["http-equiv"].toLowerCase() === "content-security-policy"
 		) {
 			// just delete it. this needs to be emulated eventually but like
-			node = new Comment(node.attribs.content);
+			node = new Comment("");
 		} else if (
 			node.attribs["http-equiv"] === "refresh" &&
 			node.attribs.content.includes("url")
