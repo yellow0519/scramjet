@@ -740,6 +740,8 @@ where
 		if let Some(t) = &it.update {
 			walk::walk_expression(self, t);
 		}
+
+		walk::walk_statement(self, &it.body);
 	}
 
 	fn visit_for_of_statement(&mut self, it: &oxc::ast::ast::ForOfStatement<'data>) {
