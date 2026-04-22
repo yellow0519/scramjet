@@ -2,21 +2,21 @@ import { unrewriteUrl } from "@rewriters/url";
 import { ScramjetClient } from "@client/index";
 
 export class ScramjetServiceWorkerRuntime {
-	recvport: MessagePort;
 	constructor(public client: ScramjetClient) {
 		// @ts-ignore
 		self.onconnect = (cevent: MessageEvent) => {
 			const port = cevent.ports[0];
+			let recvport: MessagePort | undefined;
 			dbg.log("sw", "connected");
 
 			port.addEventListener("message", (event) => {
 				console.log("sw", event.data);
 				if ("scramjet$type" in event.data) {
 					if (event.data.scramjet$type === "init") {
-						this.recvport = event.data.scramjet$port;
-						this.recvport.postMessage({ scramjet$type: "init" });
-					} else {
-						handleMessage.call(this, client, event.data);
+						recvport = event.data.scramjet$port;
+						recvport.postMessage({ scramjet$type: "init" });
+					} else if (recvport) {
+						handleMessage.call(this, client, event.data, recvport);
 					}
 				}
 			});
@@ -59,9 +59,9 @@ export class ScramjetServiceWorkerRuntime {
 function handleMessage(
 	this: ScramjetServiceWorkerRuntime,
 	client: ScramjetClient,
-	data: MessageW2R
+	data: MessageW2R,
+	port: MessagePort
 ) {
-	const port = this.recvport;
 	const type = data.scramjet$type;
 	const token = data.scramjet$token;
 	const handlers = client.eventcallbacks.get(self);
