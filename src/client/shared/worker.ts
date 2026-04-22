@@ -5,7 +5,9 @@ import { ScramjetClient } from "@client/index";
 export default function (client: ScramjetClient, _self: typeof globalThis) {
 	client.Proxy("Worker", {
 		construct(ctx) {
+			const nonce = crypto.randomUUID();
 			ctx.args[0] = rewriteUrl(ctx.args[0], client.meta) + "?dest=worker";
+			ctx.args[0] += `&$scramjet$baremuxNonce=${encodeURIComponent(nonce)}`;
 
 			if (ctx.args[1] && ctx.args[1].type === "module") {
 				ctx.args[0] += "&type=module";
@@ -21,6 +23,7 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 					worker,
 					{
 						$scramjet$type: "baremuxinit",
+						nonce,
 						port,
 					},
 					[port]
@@ -32,7 +35,9 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 	// sharedworkers can only be constructed from window
 	client.Proxy("SharedWorker", {
 		construct(ctx) {
+			const nonce = crypto.randomUUID();
 			ctx.args[0] = rewriteUrl(ctx.args[0], client.meta) + "?dest=sharedworker";
+			ctx.args[0] += `&$scramjet$baremuxNonce=${encodeURIComponent(nonce)}`;
 
 			if (ctx.args[1] && typeof ctx.args[1] === "string")
 				ctx.args[1] = `${client.url.origin}@${ctx.args[1]}`;
@@ -57,6 +62,7 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 					worker.port,
 					{
 						$scramjet$type: "baremuxinit",
+						nonce,
 						port,
 					},
 					[port]

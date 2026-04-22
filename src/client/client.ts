@@ -134,17 +134,26 @@ export class ScramjetClient {
 			// this.bare = new EpoxyClient();
 			this.bare = new BareClient();
 		} else {
+			const expectedNonce = new URL(global.location.href).searchParams.get(
+				"$scramjet$baremuxNonce"
+			);
 			this.bare = new BareClient(
 				new Promise((resolve) => {
-					addEventListener("message", ({ data }) => {
-						if (typeof data !== "object") return;
+					const onMessage = ({ data }: MessageEvent) => {
+						if (!data || typeof data !== "object") return;
 						if (
 							"$scramjet$type" in data &&
-							data.$scramjet$type === "baremuxinit"
+							data.$scramjet$type === "baremuxinit" &&
+							"nonce" in data &&
+							data.nonce === expectedNonce &&
+							"port" in data &&
+							data.port instanceof MessagePort
 						) {
+							removeEventListener("message", onMessage);
 							resolve(data.port);
 						}
-					});
+					};
+					addEventListener("message", onMessage);
 				})
 			);
 		}
