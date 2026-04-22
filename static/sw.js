@@ -26,10 +26,31 @@ self.addEventListener("fetch", (event) => {
 });
 
 let playgroundData;
-self.addEventListener("message", ({ data }) => {
-	if (data.type === "playgroundData") {
-		playgroundData = data;
+
+function isTrustedPlaygroundClient(source) {
+	if (!source || typeof source.url !== "string") return false;
+
+	try {
+		const sourceUrl = new URL(source.url);
+		return sourceUrl.pathname.endsWith("/playground.html");
+	} catch {
+		return false;
 	}
+}
+
+self.addEventListener("message", (event) => {
+	const { data, source } = event;
+	if (data?.type !== "playgroundData") return;
+	if (!isTrustedPlaygroundClient(source)) return;
+
+	try {
+		const origin = new URL(data.origin);
+		if (!["http:", "https:"].includes(origin.protocol)) return;
+	} catch {
+		return;
+	}
+
+	playgroundData = data;
 });
 
 scramjet.addEventListener("request", (e) => {
