@@ -16,6 +16,31 @@ export type Cookie = {
 export class CookieStore {
 	private cookies: Record<string, Cookie> = {};
 
+	private getCookieObjects(url: URL, fromJs: boolean): Cookie[] {
+		const now = new Date();
+		const cookies = Object.values(this.cookies);
+		const validCookies: Cookie[] = [];
+
+		for (const cookie of cookies) {
+			if (cookie.expires && new Date(cookie.expires) < now) {
+				delete this.cookies[`${cookie.domain}@${cookie.path}@${cookie.name}`];
+				continue;
+			}
+
+			if (cookie.secure && url.protocol !== "https:") continue;
+			if (cookie.httpOnly && fromJs) continue;
+			if (!url.pathname.startsWith(cookie.path)) continue;
+
+			if (cookie.domain.startsWith(".")) {
+				if (!url.hostname.endsWith(cookie.domain.slice(1))) continue;
+			}
+
+			validCookies.push(cookie);
+		}
+
+		return validCookies;
+	}
+
 	setCookies(cookies: string[], url: URL) {
 		for (const str of cookies) {
 			const parsed = parse(str);
@@ -39,31 +64,21 @@ export class CookieStore {
 	}
 
 	getCookies(url: URL, fromJs: boolean): string {
-		const now = new Date();
-		const cookies = Object.values(this.cookies);
-
-		const validCookies: Cookie[] = [];
-
-		for (const cookie of cookies) {
-			if (cookie.expires && new Date(cookie.expires) < now) {
-				delete this.cookies[`${cookie.domain}@${cookie.path}@${cookie.name}`];
-				continue;
-			}
-
-			if (cookie.secure && url.protocol !== "https:") continue;
-			if (cookie.httpOnly && fromJs) continue;
-			if (!url.pathname.startsWith(cookie.path)) continue;
-
-			if (cookie.domain.startsWith(".")) {
-				if (!url.hostname.endsWith(cookie.domain.slice(1))) continue;
-			}
-
-			validCookies.push(cookie);
-		}
-
-		return validCookies
+		return this.getCookieObjects(url, fromJs)
 			.map((cookie) => `${cookie.name}=${cookie.value}`)
 			.join("; ");
+	}
+
+	dump(url?: URL, fromJs: boolean = false): string {
+		if (!url) return JSON.stringify(this.cookies);
+
+		const filtered: Record<string, Cookie> = {};
+		for (const cookie of this.getCookieObjects(url, fromJs)) {
+			const id = `${cookie.domain}@${cookie.path}@${cookie.name}`;
+			filtered[id] = cookie;
+		}
+
+		return JSON.stringify(filtered);
 	}
 
 	load(cookies: string) {
@@ -71,7 +86,4 @@ export class CookieStore {
 		this.cookies = JSON.parse(cookies);
 	}
 
-	dump(): string {
-		return JSON.stringify(this.cookies);
-	}
 }

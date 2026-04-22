@@ -10,9 +10,10 @@ import { htmlRules } from "@/shared/htmlRules";
 
 export function getInjectScripts<T>(
 	cookieStore: CookieStore,
+	meta: URLMeta,
 	script: (src: string) => T
 ): T[] {
-	const dump = JSON.stringify(cookieStore.dump());
+	const dump = cookieStore.dump(meta.origin, true);
 	const injected = `
 		self.COOKIE = ${dump};
 		$scramjetLoadClient().loadAndHook(${JSON.stringify(config)});
@@ -66,7 +67,7 @@ function rewriteHtmlInner(
 		}
 
 		const script = (src: string) => new Element("script", { src });
-		head.children.unshift(...getInjectScripts(cookieStore, script));
+		head.children.unshift(...getInjectScripts(cookieStore, meta, script));
 	}
 
 	return render(handler.root, {
