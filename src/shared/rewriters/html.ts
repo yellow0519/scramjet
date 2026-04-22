@@ -227,19 +227,18 @@ function traverseParsedHtml(
 	}
 
 	if (node.name === "meta" && node.attribs["http-equiv"] !== undefined) {
+		const httpEquiv = node.attribs["http-equiv"].toLowerCase();
 		if (
-			node.attribs["http-equiv"].toLowerCase() === "content-security-policy"
+			httpEquiv === "content-security-policy"
 		) {
 			// just delete it. this needs to be emulated eventually but like
 			node = new Comment(node.attribs.content);
-		} else if (
-			node.attribs["http-equiv"] === "refresh" &&
-			node.attribs.content.includes("url")
-		) {
-			const contentArray = node.attribs.content.split("url=");
-			if (contentArray[1])
-				contentArray[1] = rewriteUrl(contentArray[1].trim(), meta);
-			node.attribs.content = contentArray.join("url=");
+		} else if (httpEquiv === "refresh" && typeof node.attribs.content === "string") {
+			node.attribs.content = node.attribs.content.replace(
+				/(^|;\s*)url\s*=\s*([^;]+)/i,
+				(_, prefix, refreshUrl) =>
+					`${prefix}url=${rewriteUrl(refreshUrl.trim(), meta)}`
+			);
 		}
 	}
 
