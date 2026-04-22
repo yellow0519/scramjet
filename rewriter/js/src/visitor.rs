@@ -308,6 +308,7 @@ where
 						_ => {
 							// const { ["location"]: x } = self;
 							self.jschanges.add(rewrite!(prop.key.span(), WrapProperty));
+							walk::walk_property_key(self, &prop.key);
 						}
 					}
 					self.recurse_binding_pattern(&prop.value, restids, no_shadow, location_assigned);
@@ -328,7 +329,7 @@ where
 					}
 				}
 			}
-			_ => {}
+			_ => walk::walk_binding_pattern(self, it),
 		}
 	}
 
