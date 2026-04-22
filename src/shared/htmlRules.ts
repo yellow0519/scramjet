@@ -2,6 +2,7 @@ import { CookieStore } from "@/shared/cookie";
 import { rewriteCss } from "@rewriters/css";
 import { rewriteHtml, rewriteSrcset } from "@rewriters/html";
 import { rewriteUrl, unrewriteBlob, URLMeta } from "@rewriters/url";
+import { config } from "@/shared";
 
 export const htmlRules: {
 	[key: string]: "*" | string[] | ((...any: any[]) => string | null);
@@ -23,11 +24,21 @@ export const htmlRules: {
 	},
 	{
 		fn: (value: string, meta: URLMeta) => {
-			let url = rewriteUrl(value, meta);
-			// if (meta.topFrameName)
-			// 	url += `?topFrame=${meta.topFrameName}&parentFrame=${meta.parentFrameName}`;
+			const url = rewriteUrl(value, meta);
+			const proxyPrefix = location.origin + config.prefix;
+			if (!url.startsWith(proxyPrefix)) {
+				return url;
+			}
 
-			return url;
+			const rewrittenUrl = new URL(url);
+			if (meta.topFrameName) {
+				rewrittenUrl.searchParams.set("topFrame", meta.topFrameName);
+			}
+			if (meta.parentFrameName) {
+				rewrittenUrl.searchParams.set("parentFrame", meta.parentFrameName);
+			}
+
+			return rewrittenUrl.href;
 		},
 		src: ["iframe"],
 	},
@@ -93,8 +104,8 @@ export const htmlRules: {
 	{
 		fn: (value: string, meta: URLMeta) => {
 			if (value === "_top" || value === "_unfencedTop")
-				return meta.topFrameName;
-			else if (value === "_parent") return meta.parentFrameName;
+				return meta.topFrameName || value;
+			else if (value === "_parent") return meta.parentFrameName || value;
 			else return value;
 		},
 		target: ["a", "base"],

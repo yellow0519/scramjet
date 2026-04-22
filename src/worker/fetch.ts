@@ -28,6 +28,23 @@ function isRedirect(response: BareResponseFetch) {
 	return response.status >= 300 && response.status < 400;
 }
 
+function getRealReferrer(referrer: string): string | null {
+	if (
+		!referrer ||
+		referrer === "no-referrer" ||
+		referrer === location.origin + config.prefix + "no-referrer"
+	) {
+		return null;
+	}
+
+	const proxyPrefix = location.origin + config.prefix;
+	if (referrer.startsWith(proxyPrefix)) {
+		return unrewriteUrl(referrer);
+	}
+
+	return referrer;
+}
+
 function isDownload(responseHeaders: object, destination: string): boolean {
 	if (["document", "iframe"].includes(destination)) {
 		const header = responseHeaders["content-disposition"];
@@ -78,6 +95,8 @@ export async function handleFetch(
 ) {
 	try {
 		const requestUrl = new URL(request.url);
+		const browserSentOrigin = request.headers.has("Origin");
+		const realReferrer = getRealReferrer(request.referrer);
 
 		if (requestUrl.pathname === this.config.files.wasm) {
 			return fetch(this.config.files.wasm).then(async (x) => {
@@ -209,9 +228,12 @@ export async function handleFetch(
 			if (clientURL.toString().includes("youtube.com")) {
 				// console.log(headers);
 			} else {
-				// Force referrer to unsafe-url for all requests
-				headers.set("Referer", clientURL.href);
-				headers.set("Origin", clientURL.origin);
+				headers.set("Referer", realReferrer || clientURL.href);
+
+				// Browsers do not send Origin on regular GET/HEAD navigations.
+				if (browserSentOrigin || !["GET", "HEAD"].includes(request.method)) {
+					headers.set("Origin", clientURL.origin);
+				}
 			}
 		}
 

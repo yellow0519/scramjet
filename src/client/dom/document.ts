@@ -1,4 +1,6 @@
+import { config } from "@/shared";
 import { rewriteHtml } from "@rewriters/html";
+import { unrewriteUrl } from "@rewriters/url";
 import { ScramjetClient } from "@client/index";
 
 export default function (client: ScramjetClient, _self: Self) {
@@ -30,8 +32,16 @@ export default function (client: ScramjetClient, _self: Self) {
 	});
 
 	client.Trap("Document.prototype.referrer", {
-		get() {
-			return client.url.toString();
+		get(ctx) {
+			const nativeReferrer = ctx.get() as string | undefined;
+			if (!nativeReferrer) return nativeReferrer;
+
+			const proxyPrefix = location.origin + config.prefix;
+			if (!nativeReferrer.startsWith(proxyPrefix)) {
+				return nativeReferrer;
+			}
+
+			return unrewriteUrl(nativeReferrer);
 		},
 	});
 

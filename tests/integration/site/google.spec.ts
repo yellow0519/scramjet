@@ -32,4 +32,27 @@ test.describe("Google", () => {
 
 		expect(appsMenu).not.toBeNull();
 	});
+
+	test("Apps drawer links open in the main Scramjet frame.", async ({
+		page,
+	}) => {
+		const frame = await setupPage(page, "https://www.google.com/");
+
+		await frame.locator("a.gb_C").first().click();
+
+		const appsMenuFrame = frame.locator("iframe[name='app']");
+		await appsMenuFrame.waitFor({ state: "visible" });
+
+		const appsMenu = appsMenuFrame.contentFrame();
+		await appsMenu.locator("a").filter({ hasText: "YouTube" }).first().click();
+
+		await expect
+			.poll(async () =>
+				page.evaluate(
+					() =>
+						document.querySelector("iframe")?.contentWindow?.location.href || ""
+				)
+			)
+			.toContain("youtube.com");
+	});
 });
