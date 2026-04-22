@@ -349,7 +349,12 @@ where
 		}
 	}
 
-	fn handle_for_of_in(&mut self, left: &ForStatementLeft<'data>, right: &Expression<'data>, body: &Statement<'data>) {
+	fn handle_for_of_in(
+		&mut self,
+		left: &ForStatementLeft<'data>,
+		right: &Expression<'data>,
+		body: &Statement<'data>,
+	) {
     	let mut restids: Vec<Atom<'data>> = Vec::new();
 		let mut location_assigned: bool = false;
 		if let ForStatementLeft::VariableDeclaration(v) = &left {
@@ -428,6 +433,7 @@ where
 			}
 		}
 		walk::walk_expression(self, &right);
+		walk::walk_statement(self, body);
 	}
 
 	fn scramitize(&mut self, span: Span) {
