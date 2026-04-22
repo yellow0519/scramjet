@@ -88,9 +88,43 @@ export class ScramjetServiceWorker extends EventTarget {
 			}
 
 			if (data.scramjet$type === "loadConfig") {
-				this.config = data.config;
+				await this.applyConfig(data.config);
 			}
 		});
+	}
+
+	private async applyConfig(configCandidate?: ScramjetConfig) {
+		const trustedConfig = config;
+
+		if (
+			!configCandidate ||
+			configCandidate.prefix !== trustedConfig.prefix ||
+			JSON.stringify(configCandidate.files) !==
+				JSON.stringify(trustedConfig.files) ||
+			JSON.stringify(configCandidate.globals) !==
+				JSON.stringify(trustedConfig.globals) ||
+			JSON.stringify(configCandidate.codec) !==
+				JSON.stringify(trustedConfig.codec)
+		) {
+			this.config = trustedConfig;
+			setConfig(trustedConfig);
+			await asyncSetWasm();
+
+			return;
+		}
+
+		const safeConfig: ScramjetConfig = {
+			...trustedConfig,
+			flags: {
+				...trustedConfig.flags,
+				...configCandidate.flags,
+			},
+			siteFlags: configCandidate.siteFlags,
+		};
+
+		this.config = safeConfig;
+		setConfig(safeConfig);
+		await asyncSetWasm();
 	}
 
 	/**
@@ -123,12 +157,8 @@ export class ScramjetServiceWorker extends EventTarget {
 		if (this.config) return;
 
 		const db = await openDB<ScramjetDB>("$scramjet", 1);
-		this.config = await db.get("config", "config");
-
-		if (this.config) {
-			setConfig(this.config);
-			await asyncSetWasm();
-		}
+		const persistedConfig = await db.get("config", "config");
+		await this.applyConfig(persistedConfig);
 	}
 
 	/**
