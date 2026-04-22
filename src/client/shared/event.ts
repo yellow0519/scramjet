@@ -106,18 +106,18 @@ export default function (client: ScramjetClient, self: Self) {
 					}
 				}
 
-				if (!self.event) {
-					Object.defineProperty(self, "event", {
-						get() {
-							return args[0];
-						},
-						configurable: true,
-					});
+				Object.defineProperty(self, "event", {
+					get() {
+						return args[0];
+					},
+					configurable: true,
+				});
+
+				try {
+					return Reflect.apply(target, that, args);
+				} finally {
+					delete self.event;
 				}
-
-				const rv = Reflect.apply(target, that, args);
-
-				return rv;
 			},
 			getOwnPropertyDescriptor: getOwnPropertyDescriptorHandler,
 		});
