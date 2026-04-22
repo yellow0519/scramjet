@@ -119,13 +119,32 @@ export class ScramjetClient {
 		} else {
 			this.bare = new BareClient(
 				new Promise((resolve) => {
+					let initPort: MessagePort | null = null;
 					addEventListener("message", ({ data }) => {
 						if (typeof data !== "object") return;
 						if (
 							"$scramjet$type" in data &&
-							data.$scramjet$type === "baremuxinit"
+							data.$scramjet$type === "baremuxchannel" &&
+							data.port instanceof MessagePort
 						) {
-							resolve(data.port);
+							initPort = data.port;
+							initPort.addEventListener(
+								"message",
+								({ data }) => {
+									if (typeof data !== "object") return;
+									if (
+										"$scramjet$type" in data &&
+										data.$scramjet$type === "baremuxinit" &&
+										data.port instanceof MessagePort
+									) {
+										resolve(data.port);
+										initPort?.close();
+										initPort = null;
+									}
+								},
+								{ once: true }
+							);
+							initPort.start();
 						}
 					});
 				})
