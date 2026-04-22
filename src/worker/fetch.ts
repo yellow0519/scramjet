@@ -182,6 +182,7 @@ export async function handleFetch(
 					meta,
 					request.destination,
 					scriptType,
+					request.mode,
 					this.cookieStore
 				);
 			}
@@ -567,6 +568,7 @@ async function handleResponse(
 			meta,
 			destination,
 			scriptType,
+			request.mode,
 			cookieStore
 		);
 	}
@@ -622,6 +624,7 @@ async function rewriteBody(
 	meta: URLMeta,
 	destination: RequestDestination,
 	workertype: string,
+	requestMode: RequestMode,
 	cookieStore: CookieStore
 ): Promise<BodyType> {
 	switch (destination) {
@@ -647,11 +650,15 @@ async function rewriteBody(
 				return response.body;
 			}
 		case "script": {
+			const isModuleScript =
+				workertype === "module" ||
+				(workertype === "" && requestMode === "cors");
+
 			return rewriteJs(
 				new Uint8Array(await response.arrayBuffer()),
 				response.finalURL,
 				meta,
-				workertype === "module"
+				isModuleScript
 			) as unknown as ArrayBuffer;
 		}
 		case "style":
