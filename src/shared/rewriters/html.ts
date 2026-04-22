@@ -188,7 +188,7 @@ function traverseParsedHtml(
 		node.attribs.type === "importmap" &&
 		node.children[0] !== undefined
 	) {
-		let json = node.children[0].data;
+		const json = node.children[0].data;
 		try {
 			const map = JSON.parse(json);
 			if (map.imports) {
@@ -201,7 +201,10 @@ function traverseParsedHtml(
 				}
 			}
 
-			node.children[0].data = JSON.stringify(map);
+			node.children[0].data = JSON.stringify(map).replace(
+				/<\/script/gi,
+				"<\\/script"
+			);
 		} catch (e) {
 			console.error("Failed to parse importmap JSON:", e);
 		}
