@@ -1,5 +1,5 @@
 import { unrewriteUrl } from "@rewriters/url";
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 
 export class ScramjetServiceWorkerRuntime {
 	recvport: MessagePort;
@@ -74,7 +74,7 @@ function handleMessage(
 		for (const handler of fetchhandlers) {
 			const request = data.scramjet$request;
 
-			const Request = client.natives["Request"];
+			const Request = client.nativeValue(SCRAMJETCLIENTINTERNAL, "Request");
 			const fakeRequest = new Request(unrewriteUrl(request.url), {
 				body: request.body,
 				headers: new Headers(request.headers),

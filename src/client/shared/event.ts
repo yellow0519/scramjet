@@ -1,7 +1,7 @@
 import { iswindow } from "@client/entry";
 import { unrewriteUrl } from "@rewriters/url";
 import { SCRAMJETCLIENT } from "@/symbols";
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 import { getOwnPropertyDescriptorHandler } from "@client/helpers";
 
 const realOnEvent = Symbol.for("scramjet original onevent function");
@@ -175,7 +175,8 @@ export default function (client: ScramjetClient, self: Self) {
 				key.startsWith("on") &&
 				handlers[key.slice(2)]
 			) {
-				const descriptor = client.natives.call(
+				const descriptor = client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Object.getOwnPropertyDescriptor",
 					null,
 					target,

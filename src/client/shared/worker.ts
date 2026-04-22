@@ -1,6 +1,6 @@
 import { BareMuxConnection } from "@mercuryworkshop/bare-mux";
 import { rewriteUrl } from "@rewriters/url";
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 
 export default function (client: ScramjetClient, _self: typeof globalThis) {
 	client.Proxy("Worker", {
@@ -16,7 +16,8 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 
 			(async () => {
 				const port = await conn.getInnerPort();
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Worker.prototype.postMessage",
 					worker,
 					{
@@ -52,7 +53,8 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 
 			(async () => {
 				const port = await conn.getInnerPort();
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"MessagePort.prototype.postMessage",
 					worker.port,
 					{

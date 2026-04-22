@@ -4,7 +4,7 @@ import { rewriteHtml, unrewriteHtml } from "@rewriters/html";
 import { rewriteJs } from "@rewriters/js";
 import { rewriteUrl, unrewriteUrl } from "@rewriters/url";
 import { SCRAMJETCLIENT } from "@/symbols";
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 
 const encoder = new TextEncoder();
 function bytesToBase64(bytes: Uint8Array) {
@@ -43,13 +43,15 @@ export default function (client: ScramjetClient, self: typeof window) {
 		self.HTMLAreaElement.prototype,
 	];
 	const originalhrefs = [
-		client.natives.call(
+		client.callNative(
+			SCRAMJETCLIENTINTERNAL,
 			"Object.getOwnPropertyDescriptor",
 			null,
 			self.HTMLAnchorElement.prototype,
 			"href"
 		),
-		client.natives.call(
+		client.callNative(
+			SCRAMJETCLIENTINTERNAL,
 			"Object.getOwnPropertyDescriptor",
 			null,
 			self.HTMLAreaElement.prototype,
@@ -61,7 +63,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 
 	for (const attr of attrs) {
 		for (const element of attrObject[attr]) {
-			const descriptor = client.natives.call(
+			const descriptor = client.callNative(
+				SCRAMJETCLIENTINTERNAL,
 				"Object.getOwnPropertyDescriptor",
 				null,
 				element.prototype,
@@ -137,7 +140,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 			}
 
 			if (
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.hasAttribute",
 					ctx.this,
 					`scramjet-attr-${name}`
@@ -190,7 +194,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 			if (ruleList) {
 				const ret = ruleList.fn(value, client.meta, client.cookieStore);
 				if (ret == null) {
-					client.natives.call(
+					client.callNative(
+						SCRAMJETCLIENTINTERNAL,
 						"Element.prototype.removeAttribute",
 						ctx.this,
 						name
@@ -225,7 +230,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 
 			if (ruleList) {
 				ctx.args[2] = ruleList.fn(value, client.meta, client.cookieStore);
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.setAttribute",
 					ctx.this,
 					`scramjet-attr-${ctx.args[1]}`,
@@ -261,7 +267,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 		apply(ctx) {
 			if (ctx.args[0].startsWith("scramjet-attr")) return ctx.return(undefined);
 			if (
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.hasAttribute",
 					ctx.this,
 					ctx.args[0]
@@ -276,7 +283,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 		apply(ctx) {
 			if (ctx.args[0].startsWith("scramjet-attr")) return ctx.return(false);
 			if (
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.hasAttribute",
 					ctx.this,
 					ctx.args[0]
@@ -292,7 +300,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 			let newval;
 			if (ctx.this instanceof self.HTMLScriptElement) {
 				newval = rewriteJs(value, "(anonymous script element)", client.meta);
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.setAttribute",
 					ctx.this,
 					"scramjet-attr-script-source-src",
@@ -312,7 +321,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 		},
 		get(ctx) {
 			if (ctx.this instanceof self.HTMLScriptElement) {
-				const scriptSource = client.natives.call(
+				const scriptSource = client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.getAttribute",
 					ctx.this,
 					"scramjet-attr-script-source-src"
@@ -341,7 +351,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 					"(anonymous script element)",
 					client.meta
 				) as string;
-				client.natives.call(
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.setAttribute",
 					ctx.this,
 					"scramjet-attr-script-source-src",
@@ -357,7 +368,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 		},
 		get(ctx) {
 			if (ctx.this instanceof self.HTMLScriptElement) {
-				const scriptSource = client.natives.call(
+				const scriptSource = client.callNative(
+					SCRAMJETCLIENTINTERNAL,
 					"Element.prototype.getAttribute",
 					ctx.this,
 					"scramjet-attr-script-source-src"
@@ -496,7 +508,8 @@ export default function (client: ScramjetClient, self: typeof window) {
 		],
 		{
 			get(ctx) {
-				const realwin = client.descriptors.get(
+				const realwin = client.getDescriptorValue(
+					SCRAMJETCLIENTINTERNAL,
 					`${ctx.this.constructor.name}.prototype.contentWindow`,
 					ctx.this
 				);

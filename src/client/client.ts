@@ -11,16 +11,7 @@ import { iswindow } from "./entry";
 import { SingletonBox } from "./singletonbox";
 import BareClient from "@mercuryworkshop/bare-mux";
 
-type NativeStore = {
-	store: Record<string, any>;
-	call: (target: string, that: any, ...args) => any;
-	construct: (target: string, ...args) => any;
-};
-type DescriptorStore = {
-	store: Record<string, PropertyDescriptor>;
-	get: (target: string, that: any) => any;
-	set: (target: string, that: any, value: any) => void;
-};
+export const SCRAMJETCLIENTINTERNAL = Symbol("scramjet client internal");
 //eslint-disable-next-line
 export type AnyFunction = Function;
 
@@ -67,8 +58,8 @@ export class ScramjetClient {
 	// epoxy: EpoxyClient;
 	bare: BareClient;
 
-	natives: NativeStore;
-	descriptors: DescriptorStore;
+	private nativeStore: Record<string, any> = {};
+	private descriptorStore: Record<string, PropertyDescriptor> = {};
 	wrapfn: (i: any, ...args: any) => any;
 
 	cookieStore = new CookieStore();
@@ -139,81 +130,6 @@ export class ScramjetClient {
 		}
 
 		this.wrapfn = createWrapFn(this, global);
-		this.natives = {
-			store: new Proxy(
-				{},
-				{
-					get: (target, prop: string) => {
-						if (prop in target) {
-							return target[prop];
-						}
-
-						const split = prop.split(".");
-						const realProp = split.pop();
-						const realTarget = split.reduce((a, b) => a?.[b], this.global);
-
-						if (!realTarget) return;
-
-						const original = Reflect.get(realTarget, realProp);
-						target[prop] = original;
-
-						return target[prop];
-					},
-				}
-			),
-			construct(target: string, ...args) {
-				const original = this.store[target];
-				if (!original) return null;
-
-				return new original(...args);
-			},
-			call(target: string, that: any, ...args) {
-				const original = this.store[target];
-				if (!original) return null;
-
-				return original.call(that, ...args);
-			},
-		};
-		this.descriptors = {
-			store: new Proxy(
-				{},
-				{
-					get: (target, prop: string) => {
-						if (prop in target) {
-							return target[prop];
-						}
-
-						const split = prop.split(".");
-						const realProp = split.pop();
-						const realTarget = split.reduce((a, b) => a?.[b], this.global);
-
-						if (!realTarget) return;
-
-						const original = client.natives.call(
-							"Object.getOwnPropertyDescriptor",
-							null,
-							realTarget,
-							realProp
-						);
-						target[prop] = original;
-
-						return target[prop];
-					},
-				}
-			),
-			get(target: string, that: any) {
-				const original = this.store[target];
-				if (!original) return null;
-
-				return original.get.call(that);
-			},
-			set(target: string, that: any, value: any) {
-				const original = this.store[target];
-				if (!original) return null;
-
-				original.set.call(that, value);
-			},
-		};
 		// eslint-disable-next-line @typescript-eslint/no-this-alias
 		const client = this;
 		this.meta = {
@@ -222,7 +138,8 @@ export class ScramjetClient {
 			},
 			get base() {
 				if (iswindow) {
-					const base = client.natives.call(
+					const base = client.callNative(
+						SCRAMJETCLIENTINTERNAL,
 						"Document.prototype.querySelector",
 						client.global.document,
 						"base"
@@ -257,7 +174,8 @@ export class ScramjetClient {
 				}
 
 				const curclient = currentWin[SCRAMJETCLIENT];
-				const frame = curclient.descriptors.get(
+				const frame = curclient.getDescriptorValue(
+					SCRAMJETCLIENTINTERNAL,
 					"window.frameElement",
 					currentWin
 				);
@@ -288,7 +206,8 @@ export class ScramjetClient {
 				if (parentWin[SCRAMJETCLIENT]) {
 					// we're inside an iframe, and the parent is scramjet-controlled
 					const parentClient = parentWin[SCRAMJETCLIENT];
-					const frame = parentClient.descriptors.get(
+					const frame = parentClient.getDescriptorValue(
+						SCRAMJETCLIENTINTERNAL,
 						"window.frameElement",
 						parentWin
 					);
@@ -311,7 +230,8 @@ export class ScramjetClient {
 				} else {
 					// we're inside an iframe, and the parent is not scramjet-controlled
 					// return our own frame name
-					const frame = client.descriptors.get(
+					const frame = client.getDescriptorValue(
+						SCRAMJETCLIENTINTERNAL,
 						"window.frameElement",
 						client.global
 					);
@@ -333,9 +253,82 @@ export class ScramjetClient {
 		global[SCRAMJETCLIENT] = this;
 	}
 
+	private assertInternal(internal: symbol) {
+		if (internal !== SCRAMJETCLIENTINTERNAL) {
+			throw new TypeError("Access denied");
+		}
+	}
+	private getNative(target: string) {
+		if (!(target in this.nativeStore)) {
+			const split = target.split(".");
+			const prop = split.pop();
+			const realTarget = split.reduce((a, b) => a?.[b], this.global);
+			if (!realTarget) return;
+
+			this.nativeStore[target] = Reflect.get(realTarget, prop);
+		}
+
+		return this.nativeStore[target];
+	}
+	private getDescriptor(target: string) {
+		if (!(target in this.descriptorStore)) {
+			const split = target.split(".");
+			const prop = split.pop();
+			const realTarget = split.reduce((a, b) => a?.[b], this.global);
+			if (!realTarget) return;
+
+			this.descriptorStore[target] = this.callNative(
+				SCRAMJETCLIENTINTERNAL,
+				"Object.getOwnPropertyDescriptor",
+				null,
+				realTarget,
+				prop
+			);
+		}
+
+		return this.descriptorStore[target];
+	}
+	callNative(internal: symbol, target: string, that: any, ...args: any[]) {
+		this.assertInternal(internal);
+		const original = this.getNative(target);
+		if (!original) return null;
+
+		return original.call(that, ...args);
+	}
+	constructNative(internal: symbol, target: string, ...args: any[]) {
+		this.assertInternal(internal);
+		const original = this.getNative(target);
+		if (!original) return null;
+
+		return new original(...args);
+	}
+	nativeValue(internal: symbol, target: string) {
+		this.assertInternal(internal);
+
+		return this.getNative(target);
+	}
+	getDescriptorValue(internal: symbol, target: string, that: any) {
+		this.assertInternal(internal);
+		const original = this.getDescriptor(target);
+		if (!original) return null;
+
+		return original.get.call(that);
+	}
+	setDescriptorValue(internal: symbol, target: string, that: any, value: any) {
+		this.assertInternal(internal);
+		const original = this.getDescriptor(target);
+		if (!original) return null;
+
+		original.set.call(that, value);
+	}
+
 	get frame(): ScramjetFrame | null {
 		if (!iswindow) return null;
-		const frame = this.descriptors.get("window.frameElement", this.global);
+		const frame = this.getDescriptorValue(
+			SCRAMJETCLIENTINTERNAL,
+			"window.frameElement",
+			this.global
+		);
 
 		if (!frame) return null; // we're top level
 		const sframe = frame[SCRAMJETFRAME];
@@ -345,7 +338,8 @@ export class ScramjetClient {
 			let currentwin = this.global.window;
 			while (currentwin.parent !== currentwin) {
 				let currentclient = currentwin[SCRAMJETCLIENT];
-				let currentFrame = currentclient.descriptors.get(
+				let currentFrame = currentclient.getDescriptorValue(
+					SCRAMJETCLIENTINTERNAL,
 					"window.frameElement",
 					currentwin
 				);
@@ -361,7 +355,11 @@ export class ScramjetClient {
 	}
 	get isSubframe(): boolean {
 		if (!iswindow) return false;
-		const frame = this.descriptors.get("window.frameElement", this.global);
+		const frame = this.getDescriptorValue(
+			SCRAMJETCLIENTINTERNAL,
+			"window.frameElement",
+			this.global
+		);
 
 		if (!frame) return false; // we're top level
 		const sframe = frame[SCRAMJETFRAME];
@@ -440,9 +438,9 @@ export class ScramjetClient {
 		const target = split.reduce((a, b) => a?.[b], this.global);
 		if (!target) return;
 
-		if (!(name in this.natives.store)) {
+		if (!(name in this.nativeStore)) {
 			const original = Reflect.get(target, prop);
-			this.natives.store[name] = original;
+			this.nativeStore[name] = original;
 		}
 
 		this.RawProxy(target, prop, handler);
@@ -572,13 +570,14 @@ export class ScramjetClient {
 		const target = split.reduce((a, b) => a?.[b], this.global);
 		if (!target) return;
 
-		const original = this.natives.call(
+		const original = this.callNative(
+			SCRAMJETCLIENTINTERNAL,
 			"Object.getOwnPropertyDescriptor",
 			null,
 			target,
 			prop
 		);
-		this.descriptors.store[name] = original;
+		this.descriptorStore[name] = original;
 
 		return this.RawTrap(target, prop, descriptor);
 	}
@@ -591,7 +590,8 @@ export class ScramjetClient {
 		if (!prop) return;
 		if (!Reflect.has(target, prop)) return;
 
-		const oldDescriptor = this.natives.call(
+		const oldDescriptor = this.callNative(
+			SCRAMJETCLIENTINTERNAL,
 			"Object.getOwnPropertyDescriptor",
 			null,
 			target,

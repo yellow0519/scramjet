@@ -1,11 +1,15 @@
 import { config, flagEnabled } from "@/shared";
 import { rewriteUrl, unrewriteUrl } from "@rewriters/url";
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 
 export default function (client: ScramjetClient, self: Self) {
 	let worker;
 	if (self.Worker && flagEnabled("syncxhr", client.url)) {
-		worker = client.natives.construct("Worker", config.files.sync);
+		worker = client.constructNative(
+			SCRAMJETCLIENTINTERNAL,
+			"Worker",
+			config.files.sync
+		);
 	}
 	const ARGS = Symbol("xhr original args");
 	const HEADERS = Symbol("xhr headers");
@@ -44,12 +48,17 @@ export default function (client: ScramjetClient, self: Self) {
 			const sab = new SharedArrayBuffer(1024, { maxByteLength: 2147483647 });
 			const view = new DataView(sab);
 
-			client.natives.call("Worker.prototype.postMessage", worker, {
-				sab,
-				args,
-				headers: ctx.this[HEADERS],
-				body: ctx.args[0],
-			});
+			client.callNative(
+				SCRAMJETCLIENTINTERNAL,
+				"Worker.prototype.postMessage",
+				worker,
+				{
+					sab,
+					args,
+					headers: ctx.this[HEADERS],
+					body: ctx.args[0],
+				}
+			);
 
 			const now = performance.now();
 			while (view.getUint8(0) === 0) {

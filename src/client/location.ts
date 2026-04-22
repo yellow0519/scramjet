@@ -1,4 +1,4 @@
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 import { UrlChangeEvent } from "@client/events";
 import { rewriteUrl } from "@rewriters/url";
 import { iswindow } from "@client/entry";
@@ -27,7 +27,8 @@ export function createLocationProxy(
 		"search",
 	];
 	for (const prop of urlprops) {
-		const native = client.natives.call(
+		const native = client.callNative(
+			SCRAMJETCLIENTINTERNAL,
 			"Object.getOwnPropertyDescriptor",
 			null,
 			descriptorSource,
