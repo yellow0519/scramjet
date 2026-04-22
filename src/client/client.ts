@@ -134,10 +134,6 @@ export class ScramjetClient {
 
 		this.serviceWorker = this.global.navigator.serviceWorker;
 
-		if (iswindow) {
-			global.document[SCRAMJETCLIENT] = this;
-		}
-
 		this.wrapfn = createWrapFn(this, global);
 		this.natives = {
 			store: new Proxy(
