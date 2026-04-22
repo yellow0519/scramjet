@@ -53,7 +53,7 @@ export class ScramjetController extends EventTarget {
 				cleanErrors: false,
 				scramitize: false,
 				sourcemaps: true,
-				destructureRewrites: false,
+				destructureRewrites: true,
 				interceptDownloads: false,
 				allowInvalidJs: true,
 				allowFailedIntercepts: true,
