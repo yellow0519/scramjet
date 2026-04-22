@@ -408,14 +408,12 @@ export default function (client: ScramjetClient, self: typeof window) {
 	client.Proxy("Element.prototype.insertAdjacentHTML", {
 		apply(ctx) {
 			if (ctx.args[1])
-				try {
-					ctx.args[1] = rewriteHtml(
-						ctx.args[1],
-						client.cookieStore,
-						client.meta,
-						false
-					);
-				} catch {}
+				ctx.args[1] = rewriteHtml(
+					ctx.args[1],
+					client.cookieStore,
+					client.meta,
+					false
+				);
 		},
 	});
 	client.Proxy("Audio", {
@@ -532,14 +530,12 @@ export default function (client: ScramjetClient, self: typeof window) {
 	client.Proxy("DOMParser.prototype.parseFromString", {
 		apply(ctx) {
 			if (ctx.args[1] === "text/html") {
-				try {
-					ctx.args[0] = rewriteHtml(
-						ctx.args[0],
-						client.cookieStore,
-						client.meta,
-						false
-					);
-				} catch {}
+				ctx.args[0] = rewriteHtml(
+					ctx.args[0],
+					client.cookieStore,
+					client.meta,
+					false
+				);
 			}
 		},
 	});

@@ -20,14 +20,12 @@ export default function (client: ScramjetClient, _self: Self) {
 	client.Proxy("Document.prototype.write", {
 		apply(ctx) {
 			if (ctx.args[0])
-				try {
-					ctx.args[0] = rewriteHtml(
-						ctx.args[0],
-						client.cookieStore,
-						client.meta,
-						false
-					);
-				} catch {}
+				ctx.args[0] = rewriteHtml(
+					ctx.args[0],
+					client.cookieStore,
+					client.meta,
+					false
+				);
 		},
 	});
 
@@ -48,14 +46,12 @@ export default function (client: ScramjetClient, _self: Self) {
 	client.Proxy("Document.prototype.writeln", {
 		apply(ctx) {
 			if (ctx.args[0])
-				try {
-					ctx.args[0] = rewriteHtml(
-						ctx.args[0],
-						client.cookieStore,
-						client.meta,
-						false
-					);
-				} catch {}
+				ctx.args[0] = rewriteHtml(
+					ctx.args[0],
+					client.cookieStore,
+					client.meta,
+					false
+				);
 		},
 	});
 
