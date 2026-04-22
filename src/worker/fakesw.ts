@@ -8,7 +8,9 @@ export class FakeServiceWorker {
 
 	constructor(
 		public handle: MessagePort,
-		public origin: string
+		public origin: string,
+		public clientId: string,
+		public scope: string
 	) {
 		this.messageChannel.port1.addEventListener("message", (event) => {
 			if ("scramjet$type" in event.data) {
