@@ -352,7 +352,7 @@ export class ScramjetClient {
 
 	get frame(): ScramjetFrame | null {
 		if (!iswindow) return null;
-		const frame = this.descriptors.get("window.frameElement", this.global);
+		const frame = this.global.window.frameElement;
 
 		if (!frame) return null; // we're top level
 		const sframe = frame[SCRAMJETFRAME];
