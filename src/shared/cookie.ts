@@ -1,4 +1,5 @@
 // thnank you node unblocker guy
+import { ParseResultType, parseDomain } from "parse-domain";
 import parse from "set-cookie-parser";
 
 export type Cookie = {
@@ -11,24 +12,50 @@ export type Cookie = {
 	secure?: boolean;
 	httpOnly?: boolean;
 	sameSite?: "strict" | "lax" | "none";
+	hostOnly?: boolean;
 };
+
+function normalizeDomain(domain: string): string {
+	return domain.trim().replace(/^\.+/, "").toLowerCase();
+}
+
+function canSetDomainForHost(cookieDomain: string, requestHost: string): boolean {
+	if (cookieDomain === requestHost) return true;
+
+	return requestHost.endsWith(`.${cookieDomain}`);
+}
+
+function isPublicSuffix(domain: string): boolean {
+	const parsed = parseDomain(domain);
+
+	return parsed.type === ParseResultType.Listed && !parsed.domain;
+}
 
 export class CookieStore {
 	private cookies: Record<string, Cookie> = {};
 
 	setCookies(cookies: string[], url: URL) {
+		const requestHost = url.hostname.toLowerCase();
+
 		for (const str of cookies) {
-			const parsed = parse(str);
-			const domain = parsed.domain;
-			const sameSite = parsed.sameSite;
+			const parsed = parse(str)[0];
+			if (!parsed) continue;
+
 			const cookie: Cookie = {
-				domain,
-				sameSite,
-				...parsed[0],
+				...parsed,
 			};
 
-			if (!cookie.domain) cookie.domain = "." + url.hostname;
-			if (!cookie.domain.startsWith(".")) cookie.domain = "." + cookie.domain;
+			if (cookie.domain) {
+				const normalizedDomain = normalizeDomain(cookie.domain);
+				if (!canSetDomainForHost(normalizedDomain, requestHost)) continue;
+				if (isPublicSuffix(normalizedDomain)) continue;
+				cookie.domain = normalizedDomain;
+				cookie.hostOnly = false;
+			} else {
+				cookie.domain = requestHost;
+				cookie.hostOnly = true;
+			}
+
 			if (!cookie.path) cookie.path = "/";
 			if (!cookie.sameSite) cookie.sameSite = "lax";
 			if (cookie.expires) cookie.expires = cookie.expires.toString();
@@ -54,8 +81,10 @@ export class CookieStore {
 			if (cookie.httpOnly && fromJs) continue;
 			if (!url.pathname.startsWith(cookie.path)) continue;
 
-			if (cookie.domain.startsWith(".")) {
-				if (!url.hostname.endsWith(cookie.domain.slice(1))) continue;
+			if (cookie.hostOnly) {
+				if (url.hostname.toLowerCase() !== cookie.domain) continue;
+			} else if (!canSetDomainForHost(cookie.domain || "", url.hostname.toLowerCase())) {
+				continue;
 			}
 
 			validCookies.push(cookie);
