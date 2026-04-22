@@ -12,6 +12,7 @@ use oxc::{
 		ObjectAssignmentTarget, ObjectExpression, ObjectPattern, ObjectPropertyKind,
 		PrivateIdentifier, PropertyKey, ReturnStatement, SimpleAssignmentTarget, Statement,
 		StringLiteral, ThisExpression, UnaryExpression, UnaryOperator, UpdateExpression,
+		UpdateOperator,
 		VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
 	},
 	ast_visit::{Visit, walk},
@@ -758,14 +759,55 @@ where
 
 	fn visit_update_expression(&mut self, it: &UpdateExpression<'data>) {
 		// this is like a ++ or -- operator
-		match it.argument {
-			SimpleAssignmentTarget::AssignmentTargetIdentifier(_) => {
-				// if it's an identifier we cannot rewrite it
-				// $wrap(location)++ is invalid syntax
+		match &it.argument {
+	   		SimpleAssignmentTarget::AssignmentTargetIdentifier(id) => {
+	   	    // if it's an identifier we cannot rewrite it
+	   	    // $wrap(location)++ is invalid syntax
 
-				// so it's safer to assume that this "location" is a local
-				// even if it's real location you can't escape with it anyway
-				// unless you consider navigating to "https://proxy.com/NaN" escaping
+				if UNSAFE_GLOBALS.contains(&id.name.as_str()) {
+					let replacement = match (it.operator, it.prefix) {
+						(UpdateOperator::Increment, true) => format!(
+							"((t)=>({}({},\"=\",t)||({}=t),t))(+{}({})+1)",
+							self.config.trysetfn,
+							id.name,
+							id.name,
+							self.config.wrapfn,
+							id.name
+						),
+						(UpdateOperator::Increment, false) => format!(
+							"((t)=>({}({},\"=\",t+1)||({}=t+1),t))(+{}({}))",
+							self.config.trysetfn,
+							id.name,
+							id.name,
+							self.config.wrapfn,
+							id.name
+						),
+						(UpdateOperator::Decrement, true) => format!(
+							"((t)=>({}({},\"=\",t)||({}=t),t))(+{}({})-1)",
+							self.config.trysetfn,
+							id.name,
+							id.name,
+							self.config.wrapfn,
+							id.name
+						),
+						(UpdateOperator::Decrement, false) => format!(
+							"((t)=>({}({},\"=\",t-1)||({}=t-1),t))(+{}({}))",
+							self.config.trysetfn,
+							id.name,
+							id.name,
+							self.config.wrapfn,
+							id.name
+						),
+					};
+					let replacement = self.alloc.alloc_str(&replacement);
+
+					self.jschanges
+						.add(rewrite!(it.span, Replace { text: replacement }));
+				}
+
+	   			// so it's safer to assume that this "location" is a local
+	   			// even if it's real location you can't escape with it anyway
+	   			// unless you consider navigating to "https://proxy.com/NaN" escaping
 				return;
 			}
 			_ => {}
