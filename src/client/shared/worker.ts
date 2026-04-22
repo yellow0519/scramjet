@@ -33,6 +33,7 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 	client.Proxy("SharedWorker", {
 		construct(ctx) {
 			ctx.args[0] = rewriteUrl(ctx.args[0], client.meta) + "?dest=sharedworker";
+			ctx.args[0] += "&origin=" + encodeURIComponent(client.url.origin);
 
 			if (ctx.args[1] && typeof ctx.args[1] === "string")
 				ctx.args[1] = `${client.url.origin}@${ctx.args[1]}`;
