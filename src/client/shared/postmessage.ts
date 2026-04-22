@@ -13,36 +13,31 @@ export default function (client: ScramjetClient) {
 				// and this works in every case EXCEPT for the fact that all three arguments can be strings which are copied instead of cloned
 				// so we have to use `$setrealm` which will pollute this with an object from the real realm
 
-				let pollutant;
+				let callerClient = client;
+				let wrappedPostMessage = ctx.fn;
 
-				if (typeof ctx.args[0] === "object" && ctx.args[0] !== null) {
-					pollutant = ctx.args[0]; // try to use the first object we can find because it's more reliable
-				} else if (typeof ctx.args[2] === "object" && ctx.args[2] !== null) {
-					pollutant = ctx.args[2]; // next try to use transfer
-				} else if (
+				// Only use realm data from the object explicitly installed by $setrealm.
+				// Message payload/transfer objects are attacker controlled and cannot be trusted.
+				if (
 					ctx.this &&
 					POLLUTANT in ctx.this &&
 					typeof ctx.this[POLLUTANT] === "object" &&
 					ctx.this[POLLUTANT] !== null
 				) {
-					pollutant = ctx.this[POLLUTANT]; // lastly try to use the object from $setrealm
-				} else {
-					pollutant = {}; // give up
+					const {
+						constructor: { constructor: Function },
+					} = ctx.this[POLLUTANT];
+
+					// invoking stolen function will give us the caller's globalThis, remember scramjet has already proxied it!!!
+					const callerGlobalThisProxied: Self = Function("return globalThis")();
+					callerClient =
+						callerGlobalThisProxied[SCRAMJETCLIENT] || callerClient;
+
+					// this WOULD be enough but the source argument of MessageEvent has to return the caller's window
+					// and if we just call it normally it would be coming from here, which WILL NOT BE THE CALLER'S because the accessor is from the parent
+					// so with the stolen function we wrap postmessage so the source will truly be the caller's window (remember that function is scramjet's!!!)
+					wrappedPostMessage = Function("...args", "this(...args)");
 				}
-
-				// and now we can steal Function from the caller's realm
-				const {
-					constructor: { constructor: Function },
-				} = pollutant;
-
-				// invoking stolen function will give us the caller's globalThis, remember scramjet has already proxied it!!!
-				const callerGlobalThisProxied: Self = Function("return globalThis")();
-				const callerClient = callerGlobalThisProxied[SCRAMJETCLIENT];
-
-				// this WOULD be enough but the source argument of MessageEvent has to return the caller's window
-				// and if we just call it normally it would be coming from here, which WILL NOT BE THE CALLER'S because the accessor is from the parent
-				// so with the stolen function we wrap postmessage so the source will truly be the caller's window (remember that function is scramjet's!!!)
-				const wrappedPostMessage = Function("...args", "this(...args)");
 
 				ctx.args[0] = {
 					$scramjet$messagetype: "window",
