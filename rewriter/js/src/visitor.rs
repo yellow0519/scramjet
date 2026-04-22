@@ -850,6 +850,7 @@ where
 			}
 			AssignmentTarget::ObjectAssignmentTarget(o) => {
 				if !self.flags.destructure_rewrites {
+					walk::walk_expression(self, &it.right);
 					return;
 				}
 
@@ -866,7 +867,6 @@ where
 						}
 					));
 				}
-				return;
 			}
 			AssignmentTarget::ArrayAssignmentTarget(a) => {
 				if !self.flags.destructure_rewrites {
