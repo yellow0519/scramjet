@@ -569,6 +569,13 @@ async function handleResponse(
 			scriptType,
 			cookieStore
 		);
+
+		if (
+			["document", "iframe"].includes(destination) &&
+			response.headers.get("content-type")?.startsWith("text/html")
+		) {
+			responseHeaders["content-type"] = "text/html; charset=utf-8";
+		}
 	}
 
 	if (responseHeaders["accept"] === "text/event-stream") {
@@ -628,21 +635,27 @@ async function rewriteBody(
 		case "iframe":
 		case "document":
 			if (response.headers.get("content-type")?.startsWith("text/html")) {
-				// note from percs: i think this has the potential to be slow asf, but for right now its fine (we should probably look for a better solution)
-				// another note from percs: regex seems to be broken, gonna comment this out
-				/*
-        const buf = await response.arrayBuffer();
-        const decode = new TextDecoder("utf-8").decode(buf);
-        const charsetHeader = response.headers.get("content-type");
-        const charset =
-          charsetHeader?.split("charset=")[1] ||
-          decode.match(/charset=([^"]+)/)?.[1] ||
-          "utf-8";
-        const htmlContent = charset
-          ? new TextDecoder(charset).decode(buf)
-          : decode;
-        */
-				return rewriteHtml(await response.text(), cookieStore, meta, true);
+				const htmlBuffer = await response.arrayBuffer();
+				const defaultDecodedHtml = new TextDecoder("utf-8").decode(htmlBuffer);
+				const charsetHeader = response.headers.get("content-type");
+				const headerCharsetMatch = charsetHeader?.match(
+					/charset="?([^";\s]+)"?/i
+				);
+				const metaCharsetMatch = defaultDecodedHtml.match(
+					/charset="?([^";\s]+)"?/i
+				);
+				const charset = headerCharsetMatch?.[1] || metaCharsetMatch?.[1];
+
+				let htmlContent = defaultDecodedHtml;
+				if (charset && charset.toLowerCase() !== "utf-8") {
+					try {
+						htmlContent = new TextDecoder(charset).decode(htmlBuffer);
+					} catch {
+						// Unsupported charset; keep UTF-8 decode and normalize outgoing header to UTF-8.
+					}
+				}
+
+				return rewriteHtml(htmlContent, cookieStore, meta, true);
 			} else {
 				return response.body;
 			}
