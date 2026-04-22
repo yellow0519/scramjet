@@ -301,11 +301,7 @@ export default function (client: ScramjetClient, self: typeof window) {
 			} else if (ctx.this instanceof self.HTMLStyleElement) {
 				newval = rewriteCss(value, client.meta);
 			} else {
-				try {
-					newval = rewriteHtml(value, client.cookieStore, client.meta);
-				} catch {
-					newval = value;
-				}
+				newval = rewriteHtml(value, client.cookieStore, client.meta);
 			}
 
 			ctx.set(newval);
