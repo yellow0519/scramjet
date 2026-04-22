@@ -22,18 +22,18 @@ export function indirectEval(this: ScramjetClient, strict: boolean, js: any) {
 	// > If the argument of eval() is not a string, eval() returns the argument unchanged
 	if (typeof js !== "string") return js;
 
-	let indirection: typeof eval;
-	if (this.url.hostname === "accounts.google.com") {
+	const rewritten = rewriteJs(js, "(indirect eval proxy)", this.meta) as string;
+
+	let indirection: (code: string) => any;
+	if (strict) {
 		console.log("USING STRICT EVAL - BOTGUARD");
-		indirection = new Function(`
+		indirection = new Function("code", `
 			"use strict";
-			return eval;
-		`) as typeof eval;
+			return eval(code);
+		`) as (code: string) => any;
 	} else {
-		indirection = this.global.eval;
+		indirection = this.global.eval as (code: string) => any;
 	}
 
-	return indirection(
-		rewriteJs(js, "(indirect eval proxy)", this.meta) as string
-	);
+	return indirection(rewritten);
 }
