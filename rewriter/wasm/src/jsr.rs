@@ -26,6 +26,22 @@ extern "C" {
 	pub fn scramtag() -> std::string::String;
 }
 
+fn sanitize_sourcetag(raw_tag: std::string::String) -> std::string::String {
+	let mut sanitized = std::string::String::with_capacity(raw_tag.len());
+
+	for c in raw_tag.chars() {
+		if c.is_ascii_hexdigit() {
+			sanitized.push(c.to_ascii_lowercase());
+		}
+	}
+
+	if sanitized.is_empty() {
+		sanitized.push('0');
+	}
+
+	sanitized
+}
+
 #[wasm_bindgen(typescript_custom_section)]
 const REWRITER_OUTPUT: &'static str = r#"
 export type JsRewriterOutput = {
@@ -117,7 +133,7 @@ pub fn create_js(scramjet: &Object) -> Result<JsRewriter> {
 pub fn get_js_flags(scramjet: &Object, base: String, is_module: bool) -> Result<Flags> {
 	Ok(Flags {
 		is_module,
-		sourcetag: scramtag(),
+		sourcetag: sanitize_sourcetag(scramtag()),
 
 		do_sourcemaps: get_flag(scramjet, &base, "sourcemaps")?,
 		capture_errors: get_flag(scramjet, &base, "captureErrors")?,
