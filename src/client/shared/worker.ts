@@ -13,18 +13,28 @@ export default function (client: ScramjetClient, _self: typeof globalThis) {
 
 			const worker = ctx.call();
 			const conn = new BareMuxConnection();
+			const initChannel = new MessageChannel();
+
+			client.natives.call(
+				"Worker.prototype.postMessage",
+				worker,
+				{
+					$scramjet$type: "baremuxchannel",
+					port: initChannel.port1,
+				},
+				[initChannel.port1]
+			);
 
 			(async () => {
 				const port = await conn.getInnerPort();
-				client.natives.call(
-					"Worker.prototype.postMessage",
-					worker,
+				initChannel.port2.postMessage(
 					{
 						$scramjet$type: "baremuxinit",
 						port,
 					},
 					[port]
 				);
+				initChannel.port2.close();
 			})();
 		},
 	});
