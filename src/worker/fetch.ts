@@ -222,9 +222,10 @@ export async function handleFetch(
 			headers.set(key, value);
 		}
 
+		let clientURL: URL | null = null;
 		if (client && new URL(client.url).pathname.startsWith(config.prefix)) {
 			// TODO: i was against cors emulation but we might actually break stuff if we send full origin/referrer always
-			const clientURL = new URL(unrewriteUrl(client.url));
+			clientURL = new URL(unrewriteUrl(client.url));
 			if (clientURL.toString().includes("youtube.com")) {
 				// console.log(headers);
 			} else {
@@ -237,10 +238,18 @@ export async function handleFetch(
 			}
 		}
 
-		const cookies = this.cookieStore.getCookies(url, false);
+		const shouldAttachCookies =
+			request.credentials === "include" ||
+			(request.credentials === "same-origin" &&
+				clientURL !== null &&
+				clientURL.origin === url.origin);
 
-		if (cookies.length) {
-			headers.set("Cookie", cookies);
+		if (shouldAttachCookies) {
+			const cookies = this.cookieStore.getCookies(url, false);
+
+			if (cookies.length) {
+				headers.set("Cookie", cookies);
+			}
 		}
 
 		// Check if we should emulate a top-level navigation
