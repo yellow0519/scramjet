@@ -87,7 +87,15 @@ export default function (client: ScramjetClient, self: Self) {
 									return handler[prop].call(target);
 								}
 
-								if (typeof value === "function") {
+								const eventPrototypeValue =
+									prop in Event.prototype
+										? Reflect.get(Event.prototype, prop)
+										: undefined;
+
+								if (
+									typeof value === "function" &&
+									value === eventPrototypeValue
+								) {
 									return new Proxy(value, {
 										apply(target, that, args) {
 											if (that === reciever) {
