@@ -168,6 +168,19 @@ export async function handleFetch(
 		) {
 			let dataUrl = requestUrl.pathname.substring(this.config.prefix.length);
 			if (dataUrl.startsWith("blob:")) {
+				const requestedBlobUrl = new URL(dataUrl.substring("blob:".length));
+				const clientUrlIsProxied =
+					client && new URL(client.url).pathname.startsWith(config.prefix);
+
+				if (!clientUrlIsProxied) {
+					return new Response("forbidden", { status: 403 });
+				}
+
+				const clientOrigin = new URL(unrewriteUrl(client.url)).origin;
+				if (requestedBlobUrl.origin !== clientOrigin) {
+					return new Response("forbidden", { status: 403 });
+				}
+
 				dataUrl = unrewriteBlob(dataUrl);
 			}
 
