@@ -199,15 +199,17 @@ export async function handleFetch(
 			});
 		}
 
-		const activeWorker: FakeServiceWorker | null = this.serviceWorkers.find(
-			(w) => w.origin === url.origin
-		);
+		const activeWorker: FakeServiceWorker | null = this.serviceWorkers.find((w) => {
+			if (w.clientId !== client?.id) return false;
+			if (w.origin !== url.origin) return false;
+
+			return url.href.startsWith(w.scope);
+		});
 
 		if (
 			activeWorker?.connected &&
 			requestUrl.searchParams.get("from") !== "swruntime"
 		) {
-			// TODO: check scope
 			const r = await activeWorker.fetch(request);
 			if (r) return r;
 		}

@@ -11,6 +11,7 @@ import { CookieStore } from "@/shared/cookie";
 import { openDB } from "idb";
 import { config, loadCodecs, setConfig } from "@/shared";
 import { ScramjetDownload } from "@client/events";
+import { unrewriteUrl } from "@rewriters/url";
 export * from "./error";
 export * from "./fetch";
 export * from "./fakesw";
@@ -63,7 +64,8 @@ export class ScramjetServiceWorker extends EventTarget {
 			}
 		})();
 
-		addEventListener("message", async ({ data }: { data: MessageC2W }) => {
+		addEventListener("message", async (event: ExtendableMessageEvent) => {
+			const { data } = event as { data: MessageC2W };
 			if (!("scramjet$type" in data)) return;
 
 			if ("scramjet$token" in data) {
@@ -76,7 +78,21 @@ export class ScramjetServiceWorker extends EventTarget {
 			}
 
 			if (data.scramjet$type === "registerServiceWorker") {
-				this.serviceWorkers.push(new FakeServiceWorker(data.port, data.origin));
+				if (!event.source || !("id" in event.source) || !("url" in event.source))
+					return;
+
+				const source = event.source as Client;
+				const sourceUrl = new URL(unrewriteUrl(source.url));
+				if (sourceUrl.origin !== data.origin) return;
+
+				this.serviceWorkers.push(
+					new FakeServiceWorker(
+						data.port,
+						data.origin,
+						source.id,
+						new URL(data.scope, data.origin).href
+					)
+				);
 
 				return;
 			}
@@ -182,6 +198,7 @@ type RegisterServiceWorkerMessage = {
 	scramjet$type: "registerServiceWorker";
 	port: MessagePort;
 	origin: string;
+	scope: string;
 };
 
 /**
