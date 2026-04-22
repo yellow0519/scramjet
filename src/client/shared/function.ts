@@ -1,5 +1,10 @@
 import { rewriteJs } from "@rewriters/js";
-import { ScramjetClient, ProxyCtx, Proxy } from "@client/index";
+import {
+	SCRAMJETCLIENTINTERNAL,
+	ScramjetClient,
+	ProxyCtx,
+	Proxy,
+} from "@client/index";
 
 function rewriteFunction(ctx: ProxyCtx, client: ScramjetClient) {
 	const stringifiedFunction = ctx.call().toString();
@@ -24,22 +29,26 @@ export default function (client: ScramjetClient, _self: Self) {
 
 	client.Proxy("Function", handler);
 
-	const RawFunction = client.natives.call(
+	const RawFunction = client.callNative(
+		SCRAMJETCLIENTINTERNAL,
 		"eval",
 		null,
 		"(function () {})"
 	).constructor;
-	const RawAsyncFunction = client.natives.call(
+	const RawAsyncFunction = client.callNative(
+		SCRAMJETCLIENTINTERNAL,
 		"eval",
 		null,
 		"(async function () {})"
 	).constructor;
-	const RawGeneratorFunction = client.natives.call(
+	const RawGeneratorFunction = client.callNative(
+		SCRAMJETCLIENTINTERNAL,
 		"eval",
 		null,
 		"(function* () {})"
 	).constructor;
-	const RawAsyncGeneratorFunction = client.natives.call(
+	const RawAsyncGeneratorFunction = client.callNative(
+		SCRAMJETCLIENTINTERNAL,
 		"eval",
 		null,
 		"(async function* () {})"

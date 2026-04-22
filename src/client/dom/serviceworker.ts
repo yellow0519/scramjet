@@ -1,4 +1,4 @@
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 import { type MessageC2W } from "@/worker";
 import { flagEnabled } from "@/shared";
 import { rewriteUrl } from "@rewriters/url";
@@ -78,18 +78,24 @@ export default function (client: ScramjetClient, _self: Self) {
 				url += "&type=module";
 			}
 
-			const worker = client.natives.construct("SharedWorker", url);
+			const worker = client.constructNative(
+				SCRAMJETCLIENTINTERNAL,
+				"SharedWorker",
+				url
+			);
 			const handle = worker.port;
 			const state: FakeRegistrationState = {
 				scope: ctx.args[0],
 				active: handle as ServiceWorker,
 			};
-			const controller = client.descriptors.get(
+			const controller = client.getDescriptorValue(
+				SCRAMJETCLIENTINTERNAL,
 				"ServiceWorkerContainer.prototype.controller",
 				client.serviceWorker
 			);
 
-			client.natives.call(
+			client.callNative(
+				SCRAMJETCLIENTINTERNAL,
 				"ServiceWorker.prototype.postMessage",
 				controller,
 				{

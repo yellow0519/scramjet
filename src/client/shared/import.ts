@@ -1,9 +1,10 @@
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 import { config } from "@/shared";
 import { rewriteUrl } from "@rewriters/url";
 
 export default function (client: ScramjetClient, self: Self) {
-	const boundimport = client.natives.call(
+	const boundimport = client.callNative(
+		SCRAMJETCLIENTINTERNAL,
 		"Function",
 		null,
 		"url",

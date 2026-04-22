@@ -1,5 +1,5 @@
 import type { MessageC2W, MessageW2C } from "@/worker";
-import { ScramjetClient } from "@client/index";
+import { SCRAMJETCLIENTINTERNAL, ScramjetClient } from "@client/index";
 
 export default function (client: ScramjetClient, self: typeof window) {
 	client.serviceWorker.addEventListener(
@@ -24,16 +24,22 @@ export default function (client: ScramjetClient, self: typeof window) {
 		},
 		set(ctx, value: string) {
 			client.cookieStore.setCookies([value], client.url);
-			const controller = client.descriptors.get(
+			const controller = client.getDescriptorValue(
+				SCRAMJETCLIENTINTERNAL,
 				"ServiceWorkerContainer.prototype.controller",
 				client.serviceWorker
 			);
 			if (controller) {
-				client.natives.call("ServiceWorker.prototype.postMessage", controller, {
-					scramjet$type: "cookie",
-					cookie: value,
-					url: client.url.href,
-				});
+				client.callNative(
+					SCRAMJETCLIENTINTERNAL,
+					"ServiceWorker.prototype.postMessage",
+					controller,
+					{
+						scramjet$type: "cookie",
+						cookie: value,
+						url: client.url.href,
+					}
+				);
 			}
 		},
 	});
